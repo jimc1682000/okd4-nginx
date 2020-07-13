@@ -1,0 +1,38 @@
+* Check okd environment is correct or not.
+
+```oc get nodes```
+
+* Check if there is any certificate need to be approved.
+
+```oc get csr```
+
+* Create an application.
+
+```oc new-app jimmychen168/okd4-nginx:latest --name okd4-nginx```
+
+* Expose the application.
+
+```oc expose svc okd4-nginx --port=8081```
+
+* Check which pod is running our okd4-nginx container.
+
+```oc get pod```
+
+* Using Remote Shell to access okd4-nginx.
+
+```oc rsh {{pod_name}}```
+
+{{pod_name}} for example, okd4-nginx-1-z782v.
+
+* After entering okd4-nginx container, using sed to modify /usr/share/nginx/html/index.html
+
+```sed -i.bak 's/nginx/{{your_customize_word}}/' /usr/share/nginx/html/index.html```
+
+Replace {{your_customize_word}} with anything you want.
+
+#docker save jimmychen168/okd4-nginx:latest > okd4-nginx.tar
+#docker load okd4-nginx.tar
+#REF: https://peihsinsu.gitbooks.io/docker-note-book/content/docker-save-image.html
+
+The Dockerfile is referenced from this url:
+https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html
