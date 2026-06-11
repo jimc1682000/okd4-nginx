@@ -1,0 +1,54 @@
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okd4-nginx
+  labels:
+    app: okd4-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: okd4-nginx
+  template:
+    metadata:
+      labels:
+        app: okd4-nginx
+    spec:
+      containers:
+        - name: okd4-nginx
+          image: jimc1682000/okd4-nginx:latest
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: okd4-nginx
+spec:
+  selector:
+    app: okd4-nginx
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+# Route (OpenShift / OKD only)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: okd4-nginx
+spec:
+  to:
+    kind: Service
+    name: okd4-nginx
+  port:
+    targetPort: 8081
