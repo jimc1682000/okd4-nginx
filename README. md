@@ -1,38 +1,65 @@
-* Check okd environment is correct or not.
+# okd4-nginx
 
-```oc get nodes```
+> Non-privileged nginx image for OKD 4 / OpenShift
+> 配合 [OKD4 Home Lab](https://jimc1682000.github.io/okd4_files/) 使用的示範 image
 
-* Check if there is any certificate need to be approved.
+---
 
-```oc get csr```
+## 為什麼需要特殊處理
 
-* Create an application.
+OKD/OpenShift 以任意 UID 執行 pod，預設 nginx image 有兩個問題：
 
-```oc new-app jimmychen168/okd4-nginx:latest --name okd4-nginx```
+1. 監聽 port 80（privileged port，需 root）
+2. `/var/cache/nginx`、`/var/run`、`/var/log/nginx` 不允許任意 UID 寫入
 
-* Expose the application.
+## Dockerfile
 
-```oc expose svc okd4-nginx --port=8081```
+```dockerfile
+# non-privileged nginx for OpenShift
+FROM nginx:stable
 
-* Check which pod is running our okd4-nginx container.
+RUN chmod g+rwx \
+      /var/cache/nginx \
+      /var/run \
+      /var/log/nginx
 
-```oc get pod```
+# OKD 不允許監聽 privileged port，改為 8081
+RUN sed -i.bak \
+  's/listen\(.*\)80;/listen 8081;/' \
+  /etc/nginx/conf.d/default.conf
 
-* Using Remote Shell to access okd4-nginx.
+EXPOSE 8081
+```
 
-```oc rsh {{pod_name}}```
+---
 
-{{pod_name}} for example, okd4-nginx-1-z782v.
+## 部署到 OKD4
 
-* After entering okd4-nginx container, using sed to modify /usr/share/nginx/html/index.html
+```bash
+# 確認叢集狀態
+oc get nodes
+oc get clusteroperators
 
-```sed -i.bak 's/nginx/{{your_customize_word}}/' /usr/share/nginx/html/index.html```
+# 建立應用（使用現成 image）
+oc new-app jimc1682000/okd4-nginx --name okd4-nginx
 
-Replace {{your_customize_word}} with anything you want.
+# expose service（對應 8081）
+oc expose svc okd4-nginx --port=8081
 
-#docker save jimmychen168/okd4-nginx:latest > okd4-nginx.tar
-#docker load okd4-nginx.tar
-#REF: https://peihsinsu.gitbooks.io/docker-note-book/content/docker-save-image.html
+# 查看路由
+oc get route okd4-nginx
 
-The Dockerfile is referenced from this url:
-https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html
+# 進入 pod 互動
+oc rsh $(oc get pod -l app=okd4-nginx -o name)
+
+# 修改 index.html 內容（pod 內執行）
+sed -i.bak 's/nginx/OKD4 Lab/' /usr/share/nginx/html/index.html
+```
+
+---
+
+## 相關連結
+
+- [OKD4 Home Lab 作品集](https://jimc1682000.github.io/okd4_files/)
+- [okd4_files（叢集 config files）](https://github.com/jimc1682000/okd4_files)
+- [Nginx on OpenShift 參考](https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html)
